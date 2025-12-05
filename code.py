@@ -29,8 +29,11 @@ st.markdown(
         padding-bottom: 2rem !important;
     }
     h1, h2, h3, h4 {
-        color: #111827;
+        color: #0f172a;
         font-family: "Segoe UI", system-ui, sans-serif;
+    }
+    p, li, span, div {
+        color: #111827;
     }
     .kpi-card {
         border-radius: 12px;
@@ -46,7 +49,7 @@ st.markdown(
     .kpi-value {
         font-size: 1.15rem;
         font-weight: 600;
-        color: #1d4ed8;
+        color: #1e3a8a;
     }
     .kpi-note {
         font-size: 0.72rem;
@@ -94,9 +97,9 @@ st.markdown(
         color: #991b1b;
     }
     .stock-medium {
-        background: #fffbeb;
-        border: 1px solid #facc15;
-        color: #92400e;
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+        color: #1e3a8a;
     }
     .stock-low {
         background: #ecfdf3;
@@ -356,7 +359,7 @@ def optimize_logistics_distribution(daily_demand, sales, sku, inbound_units, lea
     return pd.DataFrame(rows)
 
 # ================================================================
-# 3. HEADER – TITLE + MANAGERIAL INSIGHT (GLOBAL)
+# 3. HEADER – TITLE + GLOBAL MANAGERIAL INSIGHT
 # ================================================================
 c1, c2 = st.columns([2.1, 1.2])
 
@@ -486,7 +489,7 @@ if run_btn or not st.session_state["run_done"]:
             future_forecast, lead_time_days=7
         )
 
-        # Reorder policy (used in two tabs)
+        # Reorder policy (used in multiple tabs)
         reorder_df, best_policy, mean_daily, daily_std, total_mean = optimize_reorder_policy(
             future_forecast,
             current_stock=current_stock,
@@ -495,7 +498,7 @@ if run_btn or not st.session_state["run_done"]:
             lead_time_days=7,
         )
 
-        # Logistics distribution pre-computed for use in 2 tabs
+        # Logistics distribution
         dist_df = optimize_logistics_distribution(
             daily_demand, sales, sku, inbound_units=inbound_units, lead_time_days=7
         )
@@ -523,7 +526,7 @@ if run_btn or not st.session_state["run_done"]:
             best_region = dist_df.sort_values("Excess_After", ascending=False).iloc[0]["Region"]
 
         # ============================================================
-        # 6. TABS (including final Managerial Insights)
+        # 6. TABS
         # ============================================================
         tab_forecast, tab_inventory, tab_logistics, tab_insights = st.tabs(
             ["2. Demand Forecasting", "4. Reorder Optimization", "5. Logistics & Risk", "6. Managerial Insights"]
@@ -562,8 +565,8 @@ if run_btn or not st.session_state["run_done"]:
                     y="demand_smooth",
                     color="type",
                     color_discrete_map={
-                        "Smoothed history": "#2563eb",
-                        "Forecast": "#7c3aed",
+                        "Smoothed history": "#60a5fa",
+                        "Forecast": "#1d4ed8",
                     },
                     labels={"demand_smooth": "Smoothed demand (units)", "date": "Date"},
                     title=f"Smoothed demand & 30-day forecast – {sku} / {region}",
@@ -589,7 +592,7 @@ if run_btn or not st.session_state["run_done"]:
                     color="Series",
                     color_discrete_map={
                         "Actual": "#9ca3af",
-                        "Predicted": "#2563eb",
+                        "Predicted": "#1d4ed8",
                     },
                     title="Model fit – Actual vs Predicted (test period)",
                 )
@@ -599,7 +602,7 @@ if run_btn or not st.session_state["run_done"]:
                 )
                 st.plotly_chart(fig_fit, use_container_width=True)
 
-            # Short stats row (avg demand, volatility, LT demand)
+            # Short stats row
             s1, s2, s3 = st.columns(3)
             with s1:
                 st.markdown("<div class='stat-pill'>"
@@ -622,7 +625,7 @@ if run_btn or not st.session_state["run_done"]:
             st.markdown(
                 f"""
 For **{sku}** in **{region}**, the smoothed historical demand curve on the left shows the
-underlying pattern without day-to-day noise. The purple forecast line extends this behaviour
+underlying pattern without day-to-day noise. The dark-blue forecast line extends this behaviour
 for the next 30 days. On the right, the model’s predicted line tracks the actual smoothed
 demand quite closely (MAE ≈ **{mae:.2f}**, RMSE ≈ **{rmse:.2f}**), indicating that the
 Random Forest has captured weekend effects and seasonal changes reasonably well.
@@ -634,6 +637,7 @@ require higher safety stock to avoid stockouts.
                 """
             )
 
+            # Demand by region & month
             st.markdown("<div class='section-title'>Demand by Region & Month (SKU level)</div>", unsafe_allow_html=True)
 
             rd, md = st.columns(2)
@@ -678,7 +682,6 @@ require higher safety stock to avoid stockouts.
                 fig_mon.update_layout(showlegend=False, margin=dict(l=10, r=10, t=40, b=10))
                 st.plotly_chart(fig_mon, use_container_width=True)
 
-            # Interpretation – Region & Month
             st.markdown("**Interpretation – Demand by Region & Month**")
             if not region_totals.empty and not month_totals.empty:
                 peak_region = region_totals.iloc[0]["Region"]
@@ -731,7 +734,6 @@ in high-demand locations.
                 use_container_width=True,
             )
 
-            # Interpretation – Reorder Optimization
             st.markdown("**Interpretation – Reorder Optimization**")
             st.markdown(
                 f"""
@@ -823,7 +825,6 @@ distribution come together to minimise stockouts and support faster deliveries f
         with tab_insights:
             st.markdown("<div class='section-title'>6. Managerial Insights – Scenario Summary</div>", unsafe_allow_html=True)
 
-            # Small KPI-style summary for this scenario
             c1, c2, c3 = st.columns(3)
             with c1:
                 st.markdown("<div class='kpi-card'>", unsafe_allow_html=True)
@@ -847,7 +848,6 @@ distribution come together to minimise stockouts and support faster deliveries f
 
             st.markdown("#### Managerial Takeaways for this SKU–Region")
 
-            # Build short narrative using available info
             bullet_1 = (
                 f"- **Forecasting**: The model provides a reliable signal "
                 f"(MAE ≈ {mae:.2f}, RMSE ≈ {rmse:.2f}) and expects about "
@@ -870,9 +870,7 @@ distribution come together to minimise stockouts and support faster deliveries f
                     "but the optimizer is ready to highlight shortages as new data comes in."
                 )
 
-            st.markdown(
-                bullet_1 + "\n" + bullet_2 + "\n" + bullet_3
-            )
+            st.markdown(bullet_1 + "\n" + bullet_2 + "\n" + bullet_3)
 
             st.markdown("#### Overall Business Impact")
             st.markdown(
@@ -881,7 +879,7 @@ distribution come together to minimise stockouts and support faster deliveries f
 - **Controls working capital** by balancing safety stock against stockout penalties rather than using ad-hoc buffers.  
 - **Improves delivery speed and customer service** by pushing inbound stock first to high-demand regions instead of splitting it evenly.
 
-For viva or discussion, the student can explain that this single dashboard brings together
+For viva or discussion, you can explain that this single dashboard brings together
 **forecasting, inventory control and logistics** into one AI agent that continuously supports
 Enchanto’s warehouse and planning team.
                 """
