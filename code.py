@@ -7,7 +7,6 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 
 import plotly.express as px
-import plotly.graph_objects as go
 
 # ================================================================
 # 0. PAGE CONFIG + GLOBAL THEME
@@ -18,24 +17,26 @@ st.set_page_config(
     layout="wide",
 )
 
-# Simple custom CSS for white–purple aesthetic
+# White–purple theme + header spacing fix
 st.markdown(
     """
     <style>
     .main {
         background-color: #f5f3ff;
     }
+    /* more top padding so header is not cut by browser bar */
     .block-container {
-        padding-top: 1rem !important;
+        padding-top: 2.5rem !important;
         padding-bottom: 2rem !important;
     }
     .enchanto-header {
         background: linear-gradient(90deg,#4c1d95,#7c3aed);
         color: #f9fafb;
-        padding: 12px 18px;
-        border-radius: 16px;
-        box-shadow: 0 6px 18px rgba(15,23,42,0.25);
-        margin-bottom: 14px;
+        padding: 10px 18px;
+        border-radius: 18px;
+        box-shadow: 0 4px 16px rgba(15,23,42,0.25);
+        margin-top: 0.2rem;
+        margin-bottom: 1rem;
     }
     .enchanto-tag {
         display: inline-flex;
@@ -43,9 +44,9 @@ st.markdown(
         gap: 6px;
         padding: 3px 9px;
         border-radius: 999px;
-        background: rgba(243,244,246,0.15);
+        background: rgba(243,244,246,0.18);
         font-size: 0.75rem;
-        margin-bottom: 6px;
+        margin-bottom: 4px;
     }
     .enchanto-tag-icon {
         width: 18px;
@@ -61,10 +62,10 @@ st.markdown(
     .enchanto-title {
         font-size: 1.35rem;
         font-weight: 600;
-        margin-bottom: 2px;
+        margin-bottom: 1px;
     }
     .enchanto-subtitle {
-        font-size: 0.85rem;
+        font-size: 0.83rem;
         opacity: 0.95;
     }
     .kpi-card {
@@ -79,7 +80,7 @@ st.markdown(
         color: #6b7280;
     }
     .kpi-value {
-        font-size: 1.2rem;
+        font-size: 1.15rem;
         font-weight: 600;
         color: #4c1d95;
     }
@@ -92,13 +93,13 @@ st.markdown(
         font-size: 1rem;
         font-weight: 600;
         color: #111827;
-        margin-top: 0.4rem;
-        margin-bottom: 0.15rem;
+        margin-top: 0.3rem;
+        margin-bottom: 0.1rem;
     }
     .section-subtitle {
         font-size: 0.80rem;
         color: #6b7280;
-        margin-bottom: 0.4rem;
+        margin-bottom: 0.35rem;
     }
     .stock-banner {
         border-radius: 10px;
@@ -130,7 +131,7 @@ st.markdown(
 # 1. LOAD DATA
 # ================================================================
 SALES_FILE = Path("enchanto_sales_simulated_2024.xlsx")
-INVENTORY_FILE = Path("enchanto_inventory_solver_template.xlsx")  # keep for future use
+INVENTORY_FILE = Path("enchanto_inventory_solver_template.xlsx")  # not used directly now
 
 @st.cache_data(show_spinner=True)
 def load_sales_data(path: Path):
@@ -369,6 +370,7 @@ def optimize_logistics_distribution(daily_demand, sales, sku, inbound_units, lea
         shortage_after = max(0.0, row["LT_Demand_7d"] - final_stock)
         excess_after = max(0.0, final_stock - row["LT_Demand_7d"])
         row["Shortage_After"] = shortage_after
+        excess_after = max(0.0, final_stock - row["LT_Demand_7d"])
         row["Excess_After"] = excess_after
 
     return pd.DataFrame(rows)
@@ -420,7 +422,6 @@ with st.sidebar:
     )
     region = st.selectbox("Select Region", options=regions_for_sku)
 
-    # Current stock (locked to Excel)
     computed_stock = get_current_stock(sales, sku, region)
     st.metric(
         "Current stock (units)",
@@ -498,7 +499,7 @@ if run_btn or not st.session_state["run_done"]:
         )
 
         # ============================================================
-        # 6. TABS LAYOUT FOR AESTHETICS
+        # 6. TABS LAYOUT
         # ============================================================
         tab_overview, tab_forecast, tab_inventory, tab_logistics = st.tabs(
             ["📊 Overview", "📈 Demand Forecasting", "📦 Inventory & Reorder", "🚚 Logistics & Risk"]
@@ -518,7 +519,7 @@ if run_btn or not st.session_state["run_done"]:
                 st.markdown("<div class='kpi-card'>", unsafe_allow_html=True)
                 st.markdown("<div class='kpi-label'>Model MAE (smoothed)</div>", unsafe_allow_html=True)
                 st.markdown(f"<div class='kpi-value'>{mae:.2f}</div>", unsafe_allow_html=True)
-                st.markdown("<div class='kpi-note'>Lower = better fit</div>", unsafe_allow_html=True)
+                st.markdown("<div class='kpi-note'>Average absolute error</div>", unsafe_allow_html=True)
                 st.markdown("</div>", unsafe_allow_html=True)
 
             with k2:
@@ -532,7 +533,7 @@ if run_btn or not st.session_state["run_done"]:
                 st.markdown("<div class='kpi-card'>", unsafe_allow_html=True)
                 st.markdown("<div class='kpi-label'>Lead-time demand (7 days)</div>", unsafe_allow_html=True)
                 st.markdown(f"<div class='kpi-value'>{total_mean_lt:.1f}</div>", unsafe_allow_html=True)
-                st.markdown("<div class='kpi-note'>Forecasted units in 7 days</div>", unsafe_allow_html=True)
+                st.markdown("<div class='kpi-note'>Forecasted units for 7 days</div>", unsafe_allow_html=True)
                 st.markdown("</div>", unsafe_allow_html=True)
 
             with k4:
@@ -542,26 +543,18 @@ if run_btn or not st.session_state["run_done"]:
                 st.markdown("<div class='kpi-note'>Fixed from transaction data</div>", unsafe_allow_html=True)
                 st.markdown("</div>", unsafe_allow_html=True)
 
-            st.markdown(
-                f"""
-                **Summary:** For **{sku}** in **{region}**, the AI model provides a reasonably accurate forecast
-                (low MAE and RMSE). Lead-time demand over the next 7 days is about **{total_mean_lt:.1f} units**,
-                compared to your current stock of **{current_stock:.0f} units**, which feeds directly into
-                reorder and logistics recommendations in the next tabs.
-                """
-            )
-
         # -------------------- FORECAST TAB -------------------------
         with tab_forecast:
             st.markdown("<div class='section-title'>Demand Forecasting</div>", unsafe_allow_html=True)
             st.markdown(
                 "<div class='section-subtitle'>Smoothed historical demand and 30-day forecast, "
-                "plus model fit on a hold-out period.</div>",
+                "plus model fit on a hold-out period and regional / monthly patterns.</div>",
                 unsafe_allow_html=True,
             )
 
             c1, c2 = st.columns(2)
 
+            # Smoothed history + forecast
             with c1:
                 hist = df_model.copy()
                 hist["type"] = "Smoothed history"
@@ -591,7 +584,12 @@ if run_btn or not st.session_state["run_done"]:
                     margin=dict(l=10, r=10, t=40, b=10),
                 )
                 st.plotly_chart(fig_forecast, use_container_width=True)
+                st.caption(
+                    "The purple forecast line continues the smoothed demand trend into the next 30 days, "
+                    "helping the manager see upcoming rises or dips clearly."
+                )
 
+            # Actual vs Predicted
             with c2:
                 df_fit = pd.DataFrame({
                     "date": df_model["date"].iloc[split_idx:],
@@ -615,18 +613,13 @@ if run_btn or not st.session_state["run_done"]:
                     margin=dict(l=10, r=10, t=40, b=10),
                 )
                 st.plotly_chart(fig_fit, use_container_width=True)
+                st.caption(
+                    "The predicted line closely follows the actual sales pattern, "
+                    "showing that lag features and seasonality are captured well (low RMSE)."
+                )
 
-            st.markdown(
-                f"""
-                **Interpretation:**  
-                The predicted line closely matches actual sales, which shows that lag features and
-                seasonal patterns are captured effectively. The relatively low RMSE value confirms that
-                the forecast is reliable enough to be used for inventory planning and reorder decisions.
-                """
-            )
-
-            # Demand by region & month (for this SKU)
-            st.markdown("<div class='section-title'>Demand by Region & Month (SKU Level)</div>", unsafe_allow_html=True)
+            # Demand by region & month
+            st.markdown("<div class='section-title'>Demand by Region & Month (SKU level)</div>", unsafe_allow_html=True)
             rd, md = st.columns(2)
 
             sku_hist = daily_demand[daily_demand["SKU"] == sku].copy()
@@ -670,12 +663,24 @@ if run_btn or not st.session_state["run_done"]:
                 fig_mon.update_layout(showlegend=False, margin=dict(l=10, r=10, t=40, b=10))
                 st.plotly_chart(fig_mon, use_container_width=True)
 
-        # -------------------- INVENTORY & REORDER TAB -------------------------
+            # Short interpretation for these bars
+            if not region_totals.empty and not month_totals.empty:
+                peak_region = region_totals.iloc[0]["Region"]
+                peak_month_row = month_totals.sort_values("daily_demand", ascending=False).iloc[0]
+                peak_month = peak_month_row["Month"]
+
+                st.caption(
+                    f"**Region view:** {peak_region} contributes the highest demand for this SKU, so it "
+                    f"should receive priority when allocating limited stock. "
+                    f"**Month view:** demand peaks in {peak_month}, linking closely to festive or promotion periods."
+                )
+
+        # -------------------- INVENTORY TAB -------------------------
         with tab_inventory:
             st.markdown("<div class='section-title'>Reorder Optimization</div>", unsafe_allow_html=True)
             st.markdown(
                 "<div class='section-subtitle'>Optimal service level, safety stock, reorder "
-                "level, and reorder quantity based on forecasted demand and costs.</div>",
+                "level, and reorder quantity based on forecasted demand and cost assumptions.</div>",
                 unsafe_allow_html=True,
             )
 
@@ -716,25 +721,19 @@ if run_btn or not st.session_state["run_done"]:
                 use_container_width=True,
             )
 
-            st.markdown(
-                f"""
-                **Interpretation:**  
-                The AI-driven policy evaluation compares several service levels (80–99%) and their
-                impact on holding and stockout costs. For **{sku} / {region}**, the chosen service
-                level of **{best_policy['Service_Level']*100:.0f}%** yields the lowest total cost,
-                with a reorder level of **{best_policy['Reorder_Level']:.1f} units**. Given your fixed
-                current stock of **{current_stock:.0f} units**, the model recommends reordering about
-                **{best_policy['Reorder_Qty']:.1f} units**. This balances stock availability and
-                working capital, instead of relying on guesswork.
-                """
+            st.caption(
+                f"The table compares different service levels (80–99%). The highlighted row gives "
+                f"the lowest total cost, recommending a service level of {best_policy['Service_Level']*100:.0f}%, "
+                f"reorder level of {best_policy['Reorder_Level']:.1f} units and reorder quantity of "
+                f"about {best_policy['Reorder_Qty']:.1f} units for {sku} in {region}."
             )
 
         # -------------------- LOGISTICS TAB -------------------------
         with tab_logistics:
             st.markdown("<div class='section-title'>Logistics Distribution & Stockout Risk</div>", unsafe_allow_html=True)
             st.markdown(
-                "<div class='section-subtitle'>Allocation of inbound stock to regions based on forecasted "
-                "shortages, plus stockout warnings for the selected region.</div>",
+                "<div class='section-subtitle'>Inbound stock is allocated first to regions with the highest "
+                "forecasted shortage, and a colour-coded banner shows risk for the selected region.</div>",
                 unsafe_allow_html=True,
             )
 
@@ -760,8 +759,7 @@ if run_btn or not st.session_state["run_done"]:
                         f"7-day demand ≈ <strong>{selected_row['LT_Demand_7d']:.1f}</strong> units, "
                         f"but stock after allocation is only <strong>{final_stock:.1f}</strong> units. "
                         f"Expected shortfall ≈ <strong>{shortage_after:.1f}</strong> units. "
-                        f"→ Consider an **additional reorder** of ~<strong>{extra_reorder:.0f} units</strong> "
-                        f"to protect service levels."
+                        f"→ Consider an extra reorder of ~<strong>{extra_reorder:.0f} units</strong>."
                     )
                 elif coverage_ratio < 1.2:
                     extra_reorder = selected_row["LT_Demand_7d"] * 0.2
@@ -770,8 +768,7 @@ if run_btn or not st.session_state["run_done"]:
                         f"⚠️ <strong>WATCH LEVELS</strong> in <strong>{region}</strong>. "
                         f"Stock after allocation just covers the 7-day demand "
                         f"(coverage ratio ≈ <strong>{coverage_ratio:.2f}</strong>). "
-                        f"→ A small additional reorder of ~<strong>{extra_reorder:.0f} units</strong> "
-                        f"could be used as a buffer."
+                        f"→ You may top up by ~<strong>{extra_reorder:.0f} units</strong> as a buffer."
                     )
                 else:
                     banner_class = "stock-banner stock-low"
@@ -779,7 +776,7 @@ if run_btn or not st.session_state["run_done"]:
                         f"✅ <strong>LOW STOCKOUT RISK</strong> in <strong>{region}</strong>. "
                         f"Stock after allocation comfortably covers the 7-day forecast "
                         f"(coverage ratio ≈ <strong>{coverage_ratio:.2f}</strong>). "
-                        f"No immediate extra reorder is required."
+                        f"No urgent extra reorder is required for this region."
                     )
 
                 st.markdown(
@@ -790,15 +787,9 @@ if run_btn or not st.session_state["run_done"]:
                 worst_row = dist_df.sort_values("Shortage_After", ascending=False).iloc[0]
                 best_row_log = dist_df.sort_values("Excess_After", ascending=False).iloc[0]
 
-                st.markdown(
-                    f"""
-                    **Interpretation:**  
-                    The inbound batch of **{inbound_units:.0f} units** is distributed first to regions
-                    with the largest forecasted shortfall. After allocation:
-                    - Most constrained region: **{worst_row['Region']}** (shortage ≈ {worst_row['Shortage_After']:.1f} units)  
-                    - Most comfortable region: **{best_row_log['Region']}** (excess ≈ {best_row_log['Excess_After']:.1f} units)  
-
-                    This shows how AI-based demand forecasts combined with a simple logistics rule can
-                    reduce stockouts and position inventory closer to real demand.
-                    """
+                st.caption(
+                    f"Inbound stock of {inbound_units:.0f} units is pushed first to regions with the biggest gaps. "
+                    f"{worst_row['Region']} remains the tightest region, while {best_row_log['Region']} has "
+                    f"the most comfortable coverage. This shows how AI-driven allocation reduces stockouts "
+                    f"and improves delivery speed for Enchanto perfumes."
                 )
