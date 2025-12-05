@@ -17,17 +17,28 @@ st.set_page_config(
     layout="wide",
 )
 
-# Global CSS – dark blue + white
+# Global CSS – blue background + white content card
 st.markdown(
     """
     <style>
-    .main {
-        background-color: #f9fafb;
+    /* Full app background */
+    .stApp {
+        background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 40%, #3b82f6 100%);
     }
+
+    /* Main content card */
     .block-container {
+        background-color: #ffffff;
+        border-radius: 18px;
         padding-top: 2.3rem !important;
         padding-bottom: 2rem !important;
+        padding-left: 2.2rem !important;
+        padding-right: 2.2rem !important;
+        box-shadow: 0 20px 45px rgba(15,23,42,0.35);
+        margin-top: 1.4rem;
+        margin-bottom: 1.4rem;
     }
+
     h1, h2, h3, h4 {
         color: #0f172a;
         font-family: "Segoe UI", system-ui, sans-serif;
@@ -35,6 +46,7 @@ st.markdown(
     p, li, span, div {
         color: #111827;
     }
+
     .kpi-card {
         border-radius: 12px;
         background-color: #f3f4f6;
@@ -489,7 +501,7 @@ if run_btn or not st.session_state["run_done"]:
             future_forecast, lead_time_days=7
         )
 
-        # Reorder policy (used in multiple tabs)
+        # Reorder policy
         reorder_df, best_policy, mean_daily, daily_std, total_mean = optimize_reorder_policy(
             future_forecast,
             current_stock=current_stock,
